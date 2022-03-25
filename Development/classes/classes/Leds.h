@@ -1,9 +1,4 @@
 #pragma once
-class Leds
-{
-};
-
-
 class Led {
 private:
     byte pin;
