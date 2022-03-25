@@ -17,5 +17,9 @@
   <ItemGroup>
     <None Include="MergedClasses.ino" />
   </ItemGroup>
- 
+  <ItemGroup>
+    <ClInclude Include="__vm\.MergedClasses.vsarduino.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>
