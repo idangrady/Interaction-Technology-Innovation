@@ -16,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="MergedClasses.ino" />
+    <None Include="Diagram.cd" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.MergedClasses.vsarduino.h">

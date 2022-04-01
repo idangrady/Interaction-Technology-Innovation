@@ -1,43 +1,67 @@
 #include <Arduino.h>
 
 
-#define LED_1_PIN 8
-#define LED_2_PIN 9
-#define LED_3_PIN 11
-#define LED_4_PIN 12
+// LEDS Pins
+//MondayMorning
+#define RGBMondayMorningp1 22
+#define RGBMondayMorningp2 23
+#define RGBMondayMorningboth 24
+// Monday Noon
+#define RGBMondayNoonp1 25
+#define RGBMondayNoonp2 26
+#define RGBMondayNoonboth 27
+//Monday Evening
+#define RGBMondayEveningp1 28
+#define RGBMondayEveningp2 29
+#define RGBMondayEveningboth 30
+
+#define RGBTuesdayp1 25
+#define RGBTuesdayp2 26
+#define RGBTuesdayboth 27
+
+// pin value -> initilize manually (Either we create a logic for pin design ()
+#define RGBWednsdayMorning 28
+#define RGBWednsdayNoon 29
+#define RGBWednsdayEvening 30
+
+// define tiem button -> each time gets a button with initlizer of its correponding int. 
+
+// monday 
+#define BUTTON_PINMondayMorning 2
+#define MondayMorningInt 1 // will add a function that initilize all these value automatically. Yet for now , I write it manually
+
+#define BUTTON_PINMondayNoon 3
+#define MondaynoongInt 256 // will add a function that initilize all these value automatically. Yet for now , I write it manually
+
+#define BUTTON_PINMondayEvening 4
+#define MondayeveInt 65536 // will add a function that initilize all these value automatically. Yet for now , I write it manually
 
 
-#define BUTTON_PIN1 22
-#define BUTTON_PIN2 24
-#define BUTTON_PIN3 26
+//tuesday
+#define BUTTON_PINTuesdayMorning 5
+#define TuesdayMorningInt 2
 
-#define RGBMondayMorning 2
-#define RGBMondayNoon 3
-#define RGBMondayEvening 4
+#define BUTTON_PINTuesdayNoon 6
+#define TuesdayNoongInt 512
 
+#define BUTTON_PINTuesdayEve 7
+#define TuesdayEveInt 131072
 
-#define RGBTuesdayMorning 47
-#define RGBTuesdayNoon 49
-#define RGBTuesdayEvening 51
-
-
-#define RGBWednsdayMorning 39
-#define RGBWednsdayNoon 41
-#define RGBWednsdayEvening 43
-
-#define BUTTON_PINMondayMorning 52
-#define BUTTON_PINMondayNoon 50
+// wednsday
 
 
-#define PINPersonOne = 46
-#define PinPersonTwo = 48
-#define CheckMatch = 35
+#define PINPersonOne 52
+#define PinPersonTwo  12
 
-#define VALUE_PERSON_1 3
+#define VALUE_PERSON_1 0
 #define VALUE_PERSON_2 1
 
 #define DAYINWEEK 3
 #define NUMBitTotal 24
+
+bool but1 = false;;
+
+
 
 
 class Led {
@@ -65,7 +89,7 @@ public:
 class RGBLed {
 private:
     byte pinbegin;
-    byte pin[3];
+    byte pin[9];
 
     unsigned long lastDebounceTime = 0;
     unsigned long debounceDelay = 2000;
@@ -73,14 +97,14 @@ public:
     RGBLed() {};
     RGBLed(byte *pinList, byte begin) {
         this->pinbegin = begin;
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 9; i++) {
             this->pin[i] = pinList[i];
         }
         
         init();
     }
     void init() {
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 9; i++) {
             pinMode(pin[i], OUTPUT);
         }
         
@@ -91,16 +115,22 @@ public:
         digitalWrite(pin[i], HIGH);
         //delay(500);
     }
+    void onFull(int idx) {
+        Serial.print("Turn on: Pin: "); Serial.println(idx);
+        digitalWrite(pin[idx], HIGH);
+        //delay(500);
+    }
+    void onBegin() { digitalWrite(pinbegin, HIGH);}
     void turnPinOff(int i){ digitalWrite(pin[i], HIGH); }
     void off() {
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < sizeof(pin) / sizeof(pin[0]); i++) {
             digitalWrite(pin[i], LOW);
         }
     }
-    //void timesOn(int i) {
-    //    lastDebounceTime = millis();
-    //    if(millis() - lastDebounceTime> )
-    //}
+    void printTime() {
+        for (int i = 0; i < 9; ++i) { Serial.println(pin[i]); }
+    }
+    //void fullOff() { for (int i = 0; i < sizeof(pin) / sizeof(pin[0]); ++i) {} }
 
 };
 
@@ -110,7 +140,10 @@ private:
     byte state;
     byte lastReading;
     unsigned long lastDebounceTime = 0;
-    unsigned long debounceDelay = 50;
+    unsigned long debounceDelay = 150;
+
+    unsigned long LastBountDelay = 0;
+    unsigned long presseddelay = 1000;
 public:
     Button() {};
     Button(byte pin) {
@@ -139,7 +172,14 @@ public:
         return state;
     }
     bool isPressed() {
+        update();
         return (getState() == LOW);
+    }
+    bool isPressedWithTime() {
+        //update();
+        if (LastBountDelay + presseddelay < millis()) { LastBountDelay = millis(); return true; }
+        else { return false; }
+        //return (getState() == LOW);
     }
 
     byte getPinNum() {
@@ -154,11 +194,14 @@ public:
     String timeName;
     bool activated;
 
+    long lastupdate;
+    int durationToUpdate = 2000;
+
 
     TimeButton() {};
     TimeButton(byte pin, int val, String nameTime):Button(pin) {
         this->valuePerTime = val;
-        this->activated = false;
+        this->activated = true;
         this->timeName = nameTime;
 };
 
@@ -175,12 +218,31 @@ public:
         return(activated);
     }
     int getButtonVal() {
-        return valuePerTime;
+        if (activated) {  return valuePerTime; } //activated = false;
+        else { return -valuePerTime; } // activated = true;  
     }
-    
+    bool delayUpdate() 
+    {
+        Serial.print("millis() "); Serial.println(millis());
+        Serial.print("lastupdate() "); Serial.println(lastupdate);
+        Serial.print("millis() - lastupdate() ");  Serial.println(millis() - lastupdate);
+        if (millis() - lastupdate > durationToUpdate) { return true; }
+        else { return false; };
+    }
     // activate
-    bool activate() {activated = true;}
-    bool deactivate() { activated = false; }
+    void activate() {activated = true;}
+    void deactivate() { activated = false; }
+    void flipActived() 
+    {
+        if (isActivated()) { activated = false; }
+        else { activated = true; }
+    }
+    void updateTime() { 
+        this->lastupdate = millis(); 
+        //if (activated) { activated = false; } 
+        //else { activated = true; } 
+    }
+
         
 };
 
@@ -264,7 +326,10 @@ public:
             *(myarray_ + i) = myarray[i];
         }
     }
-
+    void updateVal(int v) 
+    {
+        this->availabllity = this->availabllity + v;
+    }
     void displayAvailable() {
 
         byte num_morning = 0;
@@ -375,7 +440,7 @@ private:
     Person ppl[5];
     Led leds[9];
     Button Buttons[10];
-    RGBLed RHBLeds[8];
+    RGBLed RHBLeds[9];
 
     TimeButton DaysDottons[10];
 
@@ -426,7 +491,12 @@ public:
         }
 
         turnOffLed();
-
+    }
+    void printTimeButtons() {
+        for (int i = 0; i < numRGVLed; ++i)
+        {
+            RHBLeds[i].printTime();
+        }
     }
     void turnOffLed() {
 
@@ -456,24 +526,54 @@ public:
             delay(2000);
         }
     }
-    int detectTimePressed() {
-        updateLastPress();
+    void detectTimePressed() {
         for (int i = 0; i < numDaysButtons; ++i) {
 
-            if (DaysDottons[i].isPressed()) {
-                Serial.println("Pressed");
-                if (DaysDottons[i].isActivated() == false) {
-                    DaysDottons[i].activate();
-                    return DaysDottons[i].getButtonVal();
+            if (DaysDottons[i].isPressed()) { //&& (but1 == false)
+                
+                if (DaysDottons[i].isPressedWithTime()) //  DaysDottons[i].delayUpdate()
+                {
+
+                    Serial.println("Pressed To update Value");
+                    // check wheether this button was pressen recently. if there is a good sequence of time -> update the params
+                    // needs to have a break of 100 mil between each update
+                    if (!DaysDottons[i].isActivated() ) {
+                        int getval = DaysDottons[i].getButtonVal();
+                        Serial.print("True: ");  Serial.println(getval);
+                        ppl[0].updateVal(getval); // the person "owner" of the board always at pos 0 -> at the end this will be separate
+                        Serial.println(ppl[0].getavailability());
+                        //Serial.print("After update Val is: "); Serial.println(DaysDottons[i].getButtonVal());
+                        DaysDottons[i].updateTime();
+
+
+                        
+                    }
+
+                    else{
+                        int getval = DaysDottons[i].getButtonVal();
+                        Serial.print("Else: ");  Serial.println(getval);
+                        ppl[0].updateVal(getval); // the person "owner" of the board always at pos 0 -> at the end this will be separate
+                        DaysDottons[i].updateTime();
+                                                                         //return  int(-DaysDottons[i].getButtonVal()); 
+                    /*    break;*/
+                    }
+                    but1 = true;
+                    DaysDottons[i].flipActived();
+
+                    //updateLastPress();
+                    //Serial.print("Is Activated: "); Serial.println(DaysDottons[i].isActivated());
+                    //delay(1000);
+                }
+                else 
+                {
+                    Serial.println("Delay Detected : Button - "); Serial.print(i);
                 }
 
-                if (DaysDottons[i].isActivated() == true) {
-                    DaysDottons[i].deactivate();
-                    return  int(-DaysDottons[i].getButtonVal());
-                }
+
+                //delay(500);
             }
         }
-        return 0;
+       
     }
     int checkoverLab( int personone,int person2, int overlap, int i)
     {
@@ -504,13 +604,20 @@ public:
 
         return -1;
     }
+    int get_idx (int n)
+    {
+        return (int(n)/int(8))*3;
+    }
     void displayAvailability(int personone, int person2, int overlap)
     {   
-        for (int n = 0; n < 10; n++) {
+        for (int n = 0; n < 24; n++) {
             //// check which RGB should light based on the bits
             int result = checkoverLab(personone, person2, overlap, n);
+            int idx = get_idx(n) ;
             Serial.print("Result: ");
             Serial.println(result);
+            Serial.print("idx: ");
+            Serial.println(idx);
             //delay(1000);
             //Serial.print("result: "); Serial.print(result); Serial.print("n: "); Serial.println(n);
             if (result >-1) 
@@ -519,19 +626,28 @@ public:
                 if (n <= 7) {
                     // morening
                     // index = i
-                    RHBLeds[n].on(result);
-                    Serial.print("Size: "); Serial.println(sizeof(RHBLeds));
+                    Serial.print("result: "); Serial.println(result); Serial.print("n+result: "); Serial.println(n+ result);
+                    //Serial.print("Amount buttons: : "); Serial.println(sizeof();
+                    RHBLeds[n].on(n+result);
+                    RHBLeds[n].printTime();
+                    
+                    //Serial.print("Size: "); Serial.println(sizeof(RHBLeds));
                     }
 
-                else if (n < 16 && n >= 8)
-                {
-                    // index = %idxPButton -> second
-                    RHBLeds[int(n % 8)].on(result);
-                }
+                //else if (n < 16 && n >= 8)
+                //{
+                //    // index = %idxPButton -> second
+                //    RHBLeds[int(n % 8)].on(result);
+                //}
                 else
                 {
                     // index = %idxPButton -> overlap -> third
-                    RHBLeds[int(n % 8)].on(result);
+                    RHBLeds[0].on(result+ (n % 7)*3); //int(n % 7)
+                    /*RHBLeds[0].on(4); RHBLeds[0].on(5);*/
+                    
+                    //Serial.println()
+                    RHBLeds[0].printTime();
+                    Serial.print("RHBLeds "); Serial.println(n % 7);
                 }
             }
             
@@ -570,9 +686,9 @@ public:
 
     }
     void checkLastPress() {
-        Serial.println(millis());  Serial.println(lastPressed); Serial.println(millis() - lastPressed);
+        //Serial.println(millis());  Serial.println(lastPressed); Serial.println(millis() - lastPressed);
 
-        if ((millis() - lastPressed > debounceDelay) ) { //&& (anyPressed)
+        if ((millis() - lastPressed > debounceDelay)) { //&& (anyPressed)
             // initlize all the RGBLED
             turnOffLed();
             anyPressed = false;
@@ -580,50 +696,160 @@ public:
     }
 };
 
+class movementSensor
+{
+private:
+    bool activated;
+    byte inputPin;
+    byte outputPin;
 
-// Regular LED
-Led led1(LED_1_PIN);
-Led led2(LED_2_PIN);
-Led led3(LED_3_PIN);
-Led led4(LED_4_PIN);
+    long lastActivate=0;
+    long trashHoldVal;
 
-// regular Button
-Button button1(BUTTON_PIN1);
-Button button2(BUTTON_PIN2);
-Button button3(BUTTON_PIN3);
+public:
+    movementSensor();
+    movementSensor(byte inputP, byte outputP, long tresh)
+    {
+        this->activated = false;
+        this->inputPin = inputP;
+        this->outputPin = outputP;
+        this->trashHoldVal = tresh;
+        init();
+    }
+    void init()
+    {
+        pinMode(inputPin, INPUT);
+        pinMode(outputPin, OUTPUT);
+    }
+    void update() 
+    {
+        int val = digitalRead(inputPin);
+        if((val==HIGH) && (millis() - lastActivate >trashHoldVal))
+        {
+        // motion detected
+            activated = true;
+            lastActivate = millis();
+        }
+        activated = false;
+    }
+    bool getState() 
+    {
+        update();
+        // if motion detedted - > hence activated = true
+        return activated;
+        Serial.print("Activated= "); Serial.println(activated);
+     }
+    byte getInputPin() { return inputPin;}
+    byte getOutputPin() { return outputPin;}
+    void setTresholdVal(long t) { trashHoldVal = t; }
+};
+
+
+void createRGBLED(int numLED, short beginPin) {
+    int num_LED = numLED / 3; // each LED has three time slot a day
+
+    // time slots for initilization
+    String nameDay[3] = { "Nonday", "Tuesday", "Wednsday" };
+    String timeDay[3] = { "morning", "Noon", "Evening" };
+    
+    int timeNum[3] = { 0,1,2 };
+
+    // Note: for the initilization, when creating the int it is simply 1>> x , where each button corresponds to a different specific int
+
+    for (int i = beginPin; i < beginPin +3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            String name = nameDay[i] + " " + timeDay[j];
+            TimeButton bu();
+        }
+    }
+
+}
+
+
+void createMorning(int numPeople)
+{
+    String nameDay[3] = { "Nonday", "Tuesday", "Wednsday" };
+    String timeDay[3] = { "morning", "Noon", "Evening" };
+
+    String dayNames[9] = {};
+
+    byte begin = 22;
+    for (int i = 0; i < 3; ++i) 
+    {
+        String nameCurrent = nameDay[0] + " " + timeDay[i];
+        dayNames[i] = nameCurrent;
+    }
+    for (int j = 0; j < sizeof(dayNames)/ sizeof(dayNames[0]); ++j) {
+        for (int i = 0; i < numPeople; ++i) 
+        {
+            //TimeButton t(begin; 1 << j; dayNames[j]);
+
+            begin + begin + 1;
+        }
+        Serial.println(dayNames[j]);
+
+    }
+}
+
+
+
+//#define RGBMondayNoonp1 25
+//#define RGBMondayNoonp2 26
+//#define RGBMondayNoonboth 27
+////Monday Evening
+//#define RGBMondayEveningp1 28
+//#define RGBMondayEveningp2 29
+//#define RGBMondayEveningboth 30
 
 //RGBLed
-byte monday[3] = { RGBMondayMorning ,RGBMondayNoon,  RGBMondayEvening };
-byte tuesday[3] = { RGBTuesdayMorning ,RGBTuesdayNoon,  RGBTuesdayEvening };
-byte wednsday[3] = { RGBWednsdayMorning ,RGBWednsdayNoon,  RGBWednsdayEvening };
+byte monday[9] = { RGBMondayMorningp1 ,RGBMondayMorningp2,  RGBMondayMorningboth ,RGBMondayNoonp1 ,RGBMondayNoonp2,  RGBMondayNoonboth,RGBMondayEveningp1,RGBMondayEveningp2, RGBMondayEveningboth };
+//byte monday[3] = { RGBMondayNoonp1 ,RGBMondayNoonp2,  RGBMondayNoonboth };
+//byte mondy[3] = { RGBMondayEveningp1 ,RGBMondayEveningp2,  RGBMondayEveningboth };
 
-RGBLed rgbLedmonday(monday, RGBMondayMorning);
-RGBLed rgbLedtuesday(tuesday, RGBTuesdayMorning);
-RGBLed rgbLedwednsday(wednsday, RGBWednsdayMorning);
+//byte tuesday[3] = { RGBTuesdayp1 ,RGBTuesdayp2,  RGBTuesdayboth };
+//byte wednsday[3] = { RGBWednsdayMorning ,RGBWednsdayNoon,  RGBWednsdayEvening };
+
+RGBLed rgbLedmonday(monday, RGBMondayMorningp1);
+//RGBLed rgbLedtuesday(tuesday, RGBTuesdayp1);
+//// for later
+//RGBLed rgbLedwednsday(wednsday, RGBWednsdayMorning);
 
 
-Button button4(BUTTON_PINMondayMorning);
+
+Button buttonPerson1(PINPersonOne);
+Button buttonPerson2(PinPersonTwo);
+
 
 // Time Button - > each Led would have its own value correponding to value it carries
-TimeButton buttonMondayMorning(BUTTON_PINMondayMorning,1,"Monday Morning");
-//TimeButton buttonMondayNoon(BUTTON_PINMondayNoon,256, "Monday Noon");
+// Monday Time Button
+TimeButton buttonMondayMorning(BUTTON_PINMondayMorning,MondayMorningInt,"Monday Morning");
+TimeButton buttonMondayNoon(BUTTON_PINMondayNoon, MondaynoongInt, "Monday Noon");
+TimeButton buttonMondayEve(BUTTON_PINMondayEvening, MondayeveInt, "Monday eve");
+
+// Tuesday Time Button
+TimeButton buttonTuedayMorning(BUTTON_PINTuesdayMorning, TuesdayMorningInt, "Tueday Morning");
+TimeButton buttonTuedayNoon(BUTTON_PINTuesdayNoon, TuesdayNoongInt, "Tueday Noon");
+TimeButton buttonTuedayEve(BUTTON_PINTuesdayEve, TuesdayEveInt, "Tueday eve");
 
 // Init Perople
 Person person_1(VALUE_PERSON_1);
 Person person_2(VALUE_PERSON_2);
 
 // List Per objects -> this will be fed to the Board object
-Button arrauButtons[3] = { button1 ,button2 ,button3 };
-Led arrayLED[4] = { led1, led2, led3, led4 };
+Button arrauButtons[1] = { };
+Led arrayLED[1] = { };
+
+
 Person ppl[2] = { person_1 , person_2 };
-RGBLed RgbLeds[3] = { rgbLedmonday ,rgbLedtuesday ,rgbLedwednsday };
+
+RGBLed RgbLeds[3] = { rgbLedmonday }; // ,rgbLedtuesday ,rgbLedwednsday
 
 // time button
-TimeButton daysButtons[1] = { buttonMondayMorning  }; // buttonMondayNoon
+TimeButton daysButtons[6] = { buttonMondayMorning,buttonMondayNoon,buttonMondayEve, buttonTuedayMorning,buttonTuedayNoon, buttonTuedayEve }; // buttonMondayNoon
 
 byte a = 0;
 
-Board b(a, ppl, 2, arrayLED, 4, arrauButtons, 3, daysButtons,1, RgbLeds,3); // TODO: Transfer it to automatic len
+Board b(a, ppl, sizeof(ppl) / sizeof(ppl[0]), arrayLED, sizeof(arrayLED) / sizeof(arrayLED[0]), arrauButtons, sizeof(arrauButtons)/ sizeof(arrauButtons[0]), daysButtons, sizeof(daysButtons) / sizeof(daysButtons[0]), RgbLeds, sizeof(RgbLeds) / sizeof(RgbLeds[0])); // TODO: Transfer it to automatic len
 
 
 void setup() {
@@ -632,23 +858,76 @@ void setup() {
 }
 int i = 0;
 void loop() {
-    Serial.println("Loop");
-    //rgbLedtuesday.on(0);
-    //delay(1000);
-    //rgbLedtuesday.on(1); delay(1000);
-    if (button4.isPressed()) {
-        b.checkIntAvailabale(0, 1);
-    }
+    //if (i == 0) { createMorning(2); i = i + 1; }
 
-    //int numDetect = b.detectTimePressed();
-    //Serial.println(numDetect);
+    //Serial.println("Loop");
+    b.detectTimePressed();
+    if (buttonPerson1.isPressed()) {
+    b.checkIntAvailabale(0, 1);
+    //b.lightOneAtTheTime();
+    }
     b.checkLastPress();
-    //delay(200);
-    i = i + 1;
 }
 
+
+
+    //if (buttonPerson1.isPressed()) {
+    //    b.checkIntAvailabale(0, 1);
+    //}
+    //b.detectTimePressed();
+    //b.checkLastPress();
+    //if (buttonPerson2.isPressed()) {
+    //    but1 = false;
+    //    Serial.println("Update");
+    //} 
+    //for (int i = 0; i < 6; ++i) 
+    //{ 
+    //    if (daysButtons[i].isPressed())
+    //    {
+    //        Serial.println(i);
+    //        if (daysButtons[i].isPressedWithTime() )
+    //        {
+    //            Serial.print(daysButtons[i].getButtonVal());Serial.println(" Pressed Is Pressed With Time");
+    //                //delay(1000);
+
+    //        }
+    //    }
+    //} 
     
 
 
+// Regular LED
+//Led led1(LED_1_PIN);
+//Led led2(LED_2_PIN);
+//Led led3(LED_3_PIN);
+//Led led4(LED_4_PIN);
+
+// regular Button
+//Button button1(BUTTON_PIN1);
+//Button button2(BUTTON_PIN2);
+//Button button3(BUTTON_PIN3);
 
 
+
+//
+//// monday 
+//#define BUTTON_PINMondayMorning 22
+//#define MondayMorningInt 1 // will add a function that initilize all these value automatically. Yet for now , I write it manually
+//
+//#define BUTTON_PINMondayNoon 23
+//#define MondaynoongInt 256 // will add a function that initilize all these value automatically. Yet for now , I write it manually
+//
+//#define BUTTON_PINMondayEvening 24
+//#define MondayeveInt 65536 // will add a function that initilize all these value automatically. Yet for now , I write it manually
+//
+//
+////tuesday
+//#define BUTTON_PINTuesdayMorning 24
+//#define TuesdayMorningInt 2
+//
+//#define BUTTON_PINTuesdayMorning 25
+//#define TuesdayMorningInt 512
+//
+//#define BUTTON_PINTuesdayMorning 26
+//#define TuesdayMorningInt 131072
+//

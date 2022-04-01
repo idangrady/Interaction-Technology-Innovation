@@ -103,6 +103,7 @@
     <DebuggerFlavor>VisualMicroDebugger</DebuggerFlavor>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="Diagram.cd" />
     <None Include="MergedClasses.ino">
       <FileType>CppCode</FileType>
     </None>
