@@ -11,7 +11,6 @@ The curriculum covers advanced design methodologies and knowledge about interact
 
 # Programmers
 
-Leszmann Piotr,
 Idan Grady
 
 # Designers
