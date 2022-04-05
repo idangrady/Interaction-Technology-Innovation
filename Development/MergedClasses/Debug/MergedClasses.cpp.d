@@ -135,5 +135,4 @@ C:\Users\admin\AppData\Local\Temp\VMBuilds\MergedClasses\arduino_due_x_dbg\Debug
  C:\Users\admin\AppData\Local\arduino15\packages\arduino\hardware\sam\1.6.12\cores\arduino/USB/USBCore.h \
  C:\Users\admin\AppData\Local\arduino15\packages\arduino\hardware\sam\1.6.12\cores\arduino/USB/USBAPI.h \
  C:\Users\admin\AppData\Local\arduino15\packages\arduino\hardware\sam\1.6.12\cores\arduino/RingBuffer.h \
- C:\Users\admin\AppData\Local\arduino15\packages\arduino\hardware\sam\1.6.12\cores\arduino/Stream.h \
- d:\visualstudio22\common7\ide\extensions\ug4sjl3u.k0o\Micro\ Platforms\default\debuggers\VM_DBG/VM_DBG.h
+ C:\Users\admin\AppData\Local\arduino15\packages\arduino\hardware\sam\1.6.12\cores\arduino/Stream.h
